@@ -768,6 +768,35 @@ void redeemCommand(std::string full, std::vector<std::string>& args, CNSocket* s
     ChatManager::sendServerMessage(sock, msg);
 }
 
+void storeCommand(std::string full, std::vector<std::string>& args, CNSocket* sock) {
+    Player* plr = PlayerManager::getPlayer(sock);
+
+    for (auto& pair2 : PlayerManager::players) {
+        if (pair2.first != sock) {
+            INITSTRUCT(sP_FE2CL_PC_STATE_CHANGE, store);
+            store.iState = 7;
+            store.iPC_ID = plr->iID;
+            pair2.first->sendPacket((void*)&store, P_FE2CL_PC_STATE_CHANGE, sizeof(sP_FE2CL_PC_STATE_CHANGE));
+        }
+    }
+}
+
+void debugCommand(std::string full, std::vector<std::string>& args, CNSocket* sock) {
+    Player* plr = PlayerManager::getPlayer(sock);
+
+    for (auto& pair2 : PlayerManager::players) {
+            INITSTRUCT(sP_FE2CL_PC_STATE_CHANGE, store);
+            store.iState = 6;
+            store.iPC_ID = plr->iID;
+            pair2.first->sendPacket((void*)&store, P_FE2CL_PC_STATE_CHANGE, sizeof(sP_FE2CL_PC_STATE_CHANGE));
+    }
+
+
+
+
+}
+
+
 void ChatManager::init() {
     REGISTER_SHARD_PACKET(P_CL2FE_REQ_SEND_FREECHAT_MESSAGE, chatHandler);
     REGISTER_SHARD_PACKET(P_CL2FE_REQ_PC_AVATAR_EMOTES_CHAT, emoteHandler);
@@ -801,6 +830,9 @@ void ChatManager::init() {
     registerCommand("hide", 100, hideCommand, "hide yourself from the global player map");
     registerCommand("unhide", 100, unhideCommand, "un-hide yourself from the global player map");
     registerCommand("redeem", 100, redeemCommand, "redeem a code item");
+
+    registerCommand("openStore", 30, storeCommand, "debug");
+    registerCommand("debug", 30, debugCommand, "debug");
 }
 
 void ChatManager::registerCommand(std::string cmd, int requiredLevel, CommandHandler handlr, std::string help) {

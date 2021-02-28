@@ -215,6 +215,7 @@ void ChunkManager::addPlayerToChunks(std::set<Chunk*> chnks, CNSocket* sock) {
             newPlayer.PCAppearanceData.Nano = plr->Nanos[plr->activeNano];
             newPlayer.PCAppearanceData.iPCState = plr->iPCState;
             newPlayer.PCAppearanceData.iSpecialState = plr->iSpecialState;
+
             memcpy(newPlayer.PCAppearanceData.ItemEquip, plr->Equip, sizeof(sItemBase) * AEQUIP_COUNT);
 
             otherSock->sendPacket((void*)&newPlayer, P_FE2CL_PC_NEW, sizeof(sP_FE2CL_PC_NEW));

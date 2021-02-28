@@ -25,6 +25,9 @@ namespace ItemManager {
         bool tradeable, sellable;
         int buyPrice, sellPrice, stackSize, level, rarity, pointDamage, groupDamage, defense, gender; // TODO: implement more as needed
     };
+
+    static void stupid(CNServer* serv, time_t currTime);
+
     // hopefully this is fine since it's never modified after load
     extern std::map<std::pair<int32_t, int32_t>, Item> ItemData; // <id, type> -> data
     extern std::map<int32_t, std::vector<VendorListing>> VendorTables;
@@ -65,6 +68,13 @@ namespace ItemManager {
     void checkItemExpire(CNSocket* sock, Player* player);
     void setItemStats(Player* plr);
     void updateEquips(CNSocket* sock, Player* plr);
+
+    void shopEnter(CNSocket* sock, CNPacketData* data);
+    void shopClose(CNSocket* sock, CNPacketData* data);
+    void shopRegister(CNSocket* sock, CNPacketData* data);
+    void shopBuy(CNSocket* sock, CNPacketData* data);
+    void myShopEnter(CNSocket* sock, CNPacketData* data);
+    void myShopStart(CNSocket* sock, CNPacketData* data);
 
 #ifdef ACADEMY
     extern std::map<int32_t, int32_t> NanoCapsules; // crate id -> nano id

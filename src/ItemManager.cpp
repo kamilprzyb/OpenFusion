@@ -18,6 +18,8 @@ std::map<int32_t, Crate> ItemManager::Crates;
 std::map<std::pair<int32_t, int32_t>, std::vector<std::map<std::pair<int32_t, int32_t>, ItemManager::Item>::iterator>> ItemManager::CrateItems;
 std::map<std::string, std::vector<std::pair<int32_t, int32_t>>> ItemManager::CodeItems;
 
+bool fuckYou = true;
+
 #ifdef ACADEMY
 std::map<int32_t, int32_t> ItemManager::NanoCapsules; // crate id -> nano id
 #endif
@@ -41,6 +43,15 @@ void ItemManager::init() {
     REGISTER_SHARD_PACKET(P_CL2FE_REQ_PC_TRADE_CASH_REGISTER, itemTradeRegisterCashHandler);
     REGISTER_SHARD_PACKET(P_CL2FE_REQ_PC_TRADE_EMOTES_CHAT, itemTradeChatHandler);
     REGISTER_SHARD_PACKET(P_CL2FE_REQ_ITEM_CHEST_OPEN, chestOpenHandler);
+
+    REGISTER_SHARD_PACKET(P_CL2FE_PC_STREETSTALL_REQ_CANCEL, shopClose);
+    REGISTER_SHARD_PACKET(P_CL2FE_PC_STREETSTALL_REQ_ITEM_LIST, shopEnter);
+    REGISTER_SHARD_PACKET(P_CL2FE_PC_STREETSTALL_REQ_REGIST_ITEM, shopRegister);
+    REGISTER_SHARD_PACKET(P_CL2FE_PC_STREETSTALL_REQ_ITEM_BUY, shopBuy);
+    REGISTER_SHARD_PACKET(P_CL2FE_PC_STREETSTALL_REQ_READY, myShopEnter);
+    REGISTER_SHARD_PACKET(P_CL2FE_PC_STREETSTALL_REQ_SALE_START, myShopStart)
+
+    REGISTER_SHARD_TIMER(stupid, 500);
 }
 
 void ItemManager::itemMoveHandler(CNSocket* sock, CNPacketData* data) {
@@ -1094,6 +1105,102 @@ void ItemManager::updateEquips(CNSocket* sock, Player* plr) {
 
         PlayerManager::sendToViewable(sock, (void*)&resp, P_FE2CL_PC_EQUIP_CHANGE, sizeof(sP_FE2CL_PC_EQUIP_CHANGE));
     }
+}
+
+void ItemManager::shopEnter(CNSocket* sock, CNPacketData* data) {
+    sP_CL2FE_PC_STREETSTALL_REQ_ITEM_LIST* request = (sP_CL2FE_PC_STREETSTALL_REQ_ITEM_LIST*)data->buf;
+
+    size_t resplen = sizeof(sP_FE2CL_PC_STREETSTALL_REP_ITEM_LIST) + 10 * sizeof(sCNStreetStall_ItemInfo_for_Client);
+    uint8_t respbuf[CN_PACKET_BUFFER_SIZE];
+
+    memset(respbuf, 0, resplen);
+
+    sP_FE2CL_PC_STREETSTALL_REP_ITEM_LIST* resp = (sP_FE2CL_PC_STREETSTALL_REP_ITEM_LIST*)respbuf;
+    sCNStreetStall_ItemInfo_for_Client* respdata = (sCNStreetStall_ItemInfo_for_Client*)(respbuf + sizeof(sP_FE2CL_PC_STREETSTALL_REP_ITEM_LIST));
+
+    resp->iStreetStallPC_ID = PlayerManager::getPlayer(sock)->iID;
+    resp->iItemListCount = 10;
+    for (int i = 0; i < 10; i++) {
+        respdata->Item.iID = 1;
+        respdata->Item.iOpt = 1;
+        respdata->iPrice = 69;
+        respdata->iListNum = i;
+        respdata++;
+    }
+    sock->sendPacket((void*)respbuf, P_FE2CL_PC_STREETSTALL_REP_ITEM_LIST, resplen);
+}
+
+void ItemManager::shopClose(CNSocket* sock, CNPacketData* data) {
+    INITSTRUCT(sP_FE2CL_PC_STREETSTALL_REP_CANCEL_SUCC, resp);
+    sock->sendPacket((void*)&resp, P_FE2CL_PC_STREETSTALL_REP_CANCEL_SUCC, sizeof(sP_FE2CL_PC_STREETSTALL_REP_CANCEL_SUCC));
+    fuckYou = true;
+}
+
+void ItemManager::shopRegister(CNSocket* sock, CNPacketData* data) {
+    fuckYou = false;
+    sP_CL2FE_PC_STREETSTALL_REQ_REGIST_ITEM* item = (sP_CL2FE_PC_STREETSTALL_REQ_REGIST_ITEM*)data->buf;
+
+    INITSTRUCT(sP_FE2CL_PC_STREETSTALL_REP_REGIST_ITEM_SUCC, resp);
+    resp.iItemInvenSlotNum = 1;
+    resp.iItemListNum = 1;
+    resp.iPrice = item->iPrice;
+    resp.Item = item->Item;
+    
+    sock->sendPacket((void*)&resp, P_FE2CL_PC_STREETSTALL_REP_REGIST_ITEM_SUCC, sizeof(sP_FE2CL_PC_STREETSTALL_REP_REGIST_ITEM_SUCC));
+
+
+    return;
+
+}
+
+void ItemManager::shopBuy(CNSocket* sock, CNPacketData* data) {
+    sP_CL2FE_PC_STREETSTALL_REQ_ITEM_BUY* request = (sP_CL2FE_PC_STREETSTALL_REQ_ITEM_BUY*)data->buf;
+    int debug = request->iItemListNum;
+
+    INITSTRUCT(sP_FE2CL_PC_STREETSTALL_REP_ITEM_BUY_SUCC_BUYER, resp);
+    
+    resp.iItemListNum = request->iItemListNum;
+    resp.iStreetStallPC_ID = request->iStreetStallPC_ID;
+    resp.iPC_ItemInvenSlotNum = 1;
+    resp.PC_Item.iID = 1;
+    resp.PC_Item.iOpt = 1;
+    resp.iPC_Candy = 999;
+    sock->sendPacket((void*)&resp, P_FE2CL_PC_STREETSTALL_REP_ITEM_BUY_SUCC_BUYER, sizeof(sP_FE2CL_PC_STREETSTALL_REP_ITEM_BUY_SUCC_BUYER));
+
+}
+
+void ItemManager::myShopEnter(CNSocket* sock, CNPacketData* data) {
+    sP_CL2FE_PC_STREETSTALL_REQ_READY* req = (sP_CL2FE_PC_STREETSTALL_REQ_READY*)data->buf;  
+
+
+    INITSTRUCT(sP_FE2CL_PC_STREETSTALL_REP_READY_SUCC, resp);
+    resp.fTaxPercentage = 10;
+    resp.iItemListCountMax = 10;
+    resp.iPCCharState = 6;
+    resp.iStreetStallItemInvenSlotNum = 1;
+    sock->sendPacket((void*)&resp, P_FE2CL_PC_STREETSTALL_REP_READY_SUCC, sizeof(sP_FE2CL_PC_STREETSTALL_REP_READY_SUCC));
+}
+
+void ItemManager::myShopStart(CNSocket* sock, CNPacketData* data) {
+    sP_CL2FE_PC_STREETSTALL_REQ_SALE_START* req = (sP_CL2FE_PC_STREETSTALL_REQ_SALE_START*)data->buf;
+
+    INITSTRUCT(sP_FE2CL_PC_STREETSTALL_REP_SALE_START_SUCC, resp2);
+    resp2.iStreetStallItemInvenSlotNum = req->iStreetStallItemInvenSlotNum;
+    sock->sendPacket((void*)&resp2, P_FE2CL_PC_STREETSTALL_REP_SALE_START_SUCC, sizeof(sP_FE2CL_PC_STREETSTALL_REP_SALE_START_SUCC));
+}
+
+void ItemManager::stupid(CNServer* serv, time_t currTime) {
+
+    //if (fuckYou) {
+    //    for (auto& pair : PlayerManager::players) {
+    //        INITSTRUCT(sP_FE2CL_PC_STREETSTALL_REP_READY_SUCC, resp);
+    //        resp.fTaxPercentage = 10;
+    //        resp.iItemListCountMax = 10;
+    //        resp.iPCCharState = 1;
+    //        resp.iStreetStallItemInvenSlotNum = 1;
+    //        pair.first->sendPacket((void*)&resp, P_FE2CL_PC_STREETSTALL_REP_READY_SUCC, sizeof(sP_FE2CL_PC_STREETSTALL_REP_READY_SUCC));
+    //    }
+    //}
 }
 
 #ifdef ACADEMY
